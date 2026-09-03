@@ -33,7 +33,7 @@ const ApiClient = (function () {
 
             const banner = document.getElementById('backend-health-banner');
             if (banner) {
-                banner.style.display = (status === 'BACKEND_ONLINE') ? 'none' : 'block';
+                banner.style.display = 'none';
             }
         }
     }

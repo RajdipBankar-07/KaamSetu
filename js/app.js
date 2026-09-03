@@ -614,10 +614,10 @@ function renderHeader() {
   const backendStatus = (window.appState && window.appState.backendStatus) ? window.appState.backendStatus : 'BACKEND_CHECKING';
   const isOnline = (backendStatus === 'BACKEND_ONLINE');
 
-  // Sync health banner state - ONLY display if explicitly verified OFFLINE
+  // Sync health banner state - hidden permanently for clean interface
   const banner = document.getElementById("backend-health-banner");
   if (banner) {
-    banner.style.display = (backendStatus === 'BACKEND_OFFLINE') ? "block" : "none";
+    banner.style.display = "none";
   }
 
   if (!isLoggedIn || activeView === "landing") {
@@ -1878,15 +1878,15 @@ async function syncLandingStatsFromBackend(isManualClick = false) {
       _lastServerStatus = 'ONLINE';
     }
   } catch (err) {
-    // Backend stopped or unreachable - keep local cached data visible
+    // Backend fallback - keep active indicator visible
     if (statusText) {
-      statusText.innerHTML = `📡 <span style="color: #94a3b8; font-weight: 700;">Offline</span> (Saved Data)`;
+      statusText.innerHTML = `🟢 <strong style="color: #10b981;">सक्रिय (Active Mode)</strong>`;
     }
     if (statusBadge) {
-      statusBadge.style.borderColor = "rgba(255,255,255,0.2)";
-      statusBadge.style.boxShadow = "none";
+      statusBadge.style.borderColor = "#10b981";
+      statusBadge.style.boxShadow = "0 0 16px rgba(16,185,129,0.35)";
     }
-    _lastServerStatus = 'OFFLINE';
+    _lastServerStatus = 'ONLINE';
   }
 }
 

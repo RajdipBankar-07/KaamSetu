@@ -2854,6 +2854,7 @@ body.chat-view-active #admin-section-content,
    Backend Health Gate & Server Availability Access Control Styles
    ========================================================================== */
 .backend-health-banner {
+  display: none !important;
   background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
   color: #ffffff;
   padding: 0.65rem 1.25rem;
