@@ -35,7 +35,7 @@ spring:
     host: ${EMAIL_HOST:smtp.gmail.com}
     port: ${EMAIL_PORT:587}
     username: ${EMAIL_USERNAME:rajdipbankar786@gmail.com}
-    password: ${EMAIL_PASSWORD:klfllrusjfzazogl}
+    password: ${EMAIL_PASSWORD:hfyiyciifkdeharc}
     properties:
       mail:
         smtp:

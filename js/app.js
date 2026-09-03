@@ -9886,9 +9886,17 @@ async function handleSendRegOtp() {
 
   try {
     const formatted = mobile.startsWith("+91") ? mobile : `+91${mobile}`;
-    await AuthManager.sendOtp(formatted);
+    const res = await AuthManager.sendOtp(formatted);
     _regVerificationState.otpSent = true;
     if (otpRow) otpRow.style.display = "flex";
+
+    const mobileOtpInput = document.getElementById("reg-otp-input");
+    if (res && res.isDemo && res.otp) {
+      if (mobileOtpInput) mobileOtpInput.value = res.otp;
+      showToast(`🔔 [डेमो मोड] चाचणी Mobile OTP: ${res.otp} (आपोआप भरला आहे)`);
+    } else {
+      showToast("✅ OTP तुमच्या मोबाईलवर पाठवला आहे!");
+    }
     
     // Start 60-second cooldown timer
     let remaining = 60;
@@ -9904,8 +9912,6 @@ async function handleSendRegOtp() {
         }
       }
     }, 1000);
-
-    showToast("✅ OTP तुमच्या मोबाईलवर पाठवला आहे!");
   } catch (e) {
     if (sendBtn) {
       sendBtn.disabled = false;
@@ -9999,9 +10005,17 @@ async function handleSendRegEmailOtp() {
   }
 
   try {
-    await AuthManager.sendEmailOtp(email);
+    const res = await AuthManager.sendEmailOtp(email);
     _regVerificationState.emailOtpSent = true;
     if (emailRow) emailRow.style.display = "flex";
+
+    const emailOtpInput = document.getElementById("reg-email-otp-input");
+    if (res && res.isDemo && res.otp) {
+      if (emailOtpInput) emailOtpInput.value = res.otp;
+      showToast(`🔔 [डेमो मोड] चाचणी Email OTP: ${res.otp} (आपोआप भरला आहे)`);
+    } else {
+      showToast("📧 Email OTP पाठवला आहे! (Check Inbox / Backend Console)");
+    }
 
     // 60-second cooldown
     let remaining = 60;
@@ -10020,8 +10034,6 @@ async function handleSendRegEmailOtp() {
         }
       }
     }, 1000);
-
-    showToast("📧 Email OTP पाठवला आहे! (Check Inbox / Backend Console)");
   } catch (e) {
     if (sendBtn) {
       sendBtn.disabled = false;

@@ -38,11 +38,26 @@ const ApiClient = (function () {
         }
     }
 
+    function isMixedContentBlocked() {
+        if (typeof window === 'undefined' || !window.location) return false;
+        return window.location.protocol === 'https:' && 
+               (API_BASE_URL.startsWith('http://localhost') || API_BASE_URL.startsWith('http://127.0.0.1'));
+    }
+
     /**
      * Dedicated Health Check Gate: GET /health
      * Distinguishes Backend Online vs Backend Offline vs Database Failure.
      */
     async function checkHealth(timeoutMs = 4000) {
+        if (isMixedContentBlocked()) {
+            const blockedErr = new Error("Backend is on localhost HTTP, but site is on HTTPS (e.g. Vercel). Operating in Smart Demo/Offline Mode.");
+            blockedErr.isNetworkError = true;
+            blockedErr.isMixedContentBlocked = true;
+            blockedErr.status = 503;
+            setServerStatus('BACKEND_OFFLINE', { isNetworkError: true, isMixedContentBlocked: true, error: blockedErr.message });
+            return { ok: false, status: 'BACKEND_OFFLINE', isMixedContentBlocked: true };
+        }
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -94,6 +109,15 @@ const ApiClient = (function () {
 
     // Generic fetch wrapper with automatic JWT Bearer token injection, AbortController timeout & status interception
     async function request(endpoint, options = {}, timeoutMs = 8000) {
+        if (isMixedContentBlocked()) {
+            const connError = new Error("KaamSetu server is currently unavailable on HTTPS static hosting.");
+            connError.isNetworkError = true;
+            connError.isMixedContentBlocked = true;
+            connError.status = 503;
+            setServerStatus('BACKEND_OFFLINE', { isNetworkError: true, isMixedContentBlocked: true });
+            throw connError;
+        }
+
         const url = `${API_BASE_URL}${endpoint}`;
         const headers = {
             'Content-Type': 'application/json',
