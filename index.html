@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KaamSetu (कामसेतू) — Rural & Village Local Jobs Marketplace</title>
+  <meta name="description" content="Dedicated, multilingual, hyper-local two-sided marketplace SaaS connecting rural workers with local employers.">
+
+  <!-- Google Fonts: Plus Jakarta Sans & Noto Sans Devanagari -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- PWA Manifest & Mobile Icons -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="Logo.png">
+  <link rel="apple-touch-icon" href="Logo.png">
+  <meta name="theme-color" content="#0d6840">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Persistent Day/Night Mode & Language Initializer -->
+  <script>
+    (function() {
+      try {
+        const savedTheme = localStorage.getItem('kaamsetu_theme_mode') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        const savedLang = localStorage.getItem('kaamsetu_lang') || 'mr';
+        document.documentElement.lang = savedLang;
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- Core Stylesheets -->
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+  <!-- Backend Health & Availability Gate Banner -->
+  <div id="backend-health-banner" class="backend-health-banner" style="display: none;">
+    <div class="banner-inner">
+      <span class="banner-text">
+        <span>⚠️</span>
+        <strong id="backend-banner-title">KaamSetu सर्व्हर सध्या अनुपलब्ध आहे (Backend Server Unavailable)</strong>
+        <span id="backend-banner-subtitle" style="font-size: 0.8rem; opacity: 0.9;">— सर्व्हर-आधारित वैशिष्ट्ये थांबवली आहेत.</span>
+      </span>
+      <button class="btn-server-retry" id="btn-backend-retry" onclick="window.retryBackendConnection()">
+        🔄 पुन्हा प्रयत्न करा (Retry Connection)
+      </button>
+    </div>
+  </div>
+
+  <div class="app-wrapper">
+    <!-- Main App Header -->
+    <header class="app-header">
+      <div class="header-container">
+        <!-- Logo & Brand Group -->
+        <div class="brand-logo-group" onclick="handleBrandLogoClick()" style="cursor: pointer;" title="KaamSetu Home">
+          <div class="brand-icon-badge">
+            <img src="Logo.png" alt="KaamSetu Logo" class="brand-logo-img">
+          </div>
+          <div class="brand-title-wrap">
+            <div class="brand-title">
+              <span data-i18n="app.name">कामसेतू</span>
+            </div>
+            <div class="brand-subtitle" data-i18n="app.tagline">गाव पातळीवरील स्थानिक रोजगार मंच</div>
+          </div>
+        </div>
+
+        <!-- Desktop Navigation Links -->
+        <nav id="desktop-nav-links" class="desktop-nav-links"></nav>
+
+        <!-- Header Actions: Language Dropdown, Auth Buttons / Profile / Notifications (Dynamically Rendered) -->
+        <div class="header-actions"></div>
+      </div>
+    </header>
+
+    <!-- Dynamic Main Content View Container -->
+    <main class="main-content">
+      <div id="view-container"></div>
+    </main>
+  </div>
+
+  <!-- Reusable Universal Modal -->
+  <div id="generic-modal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-title" class="modal-title">शीर्षक</h3>
+        <button class="close-modal-btn" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="app-toast" style="position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: #111827; color: #fff; padding: 0.75rem 1.5rem; border-radius: 9999px; font-weight: 600; font-size: 0.9rem; z-index: 10000; box-shadow: 0 10px 25px rgba(0,0,0,0.35); transition: opacity 0.3s ease; display: none; text-align: center; pointer-events: none;"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/security.js"></script>
+  <script src="js/pilot.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/location-selector.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => console.log('🌾 [PWA] Service Worker registered:', reg.scope))
+          .catch(err => console.log('🌾 [PWA] Service Worker registration failed:', err));
+      });
+    }
+
+    // Network Connectivity Event Listeners
+    window.addEventListener('online', () => {
+      const banner = document.getElementById('offline-banner');
+      if (banner) banner.style.display = 'none';
+      if (typeof showToast === 'function') showToast('🌐 इंटरनेट कनेक्शन पूर्ववत झाले! (Online)');
+    });
+
+    window.addEventListener('offline', () => {
+      const banner = document.getElementById('offline-banner');
+      if (banner) banner.style.display = 'block';
+      if (typeof showToast === 'function') showToast('📡 ऑफलाइन मोड: कॅश केलेला डेटा दर्शवत आहे.');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+# ==============================================================================
+# 🌾 KaamSetu Backend — Production Environment Profile (prod)
+# ==============================================================================
+
+server:
+  port: 8088
+  servlet:
+    context-path: /api/v1
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    connection-timeout: 20000
+    max-connections: 8192
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:kaamsetu_db}?useSSL=false&serverTimezone=Asia/Kolkata&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&rewriteBatchedStatements=true
+    username: ${DB_USER:kaamsetu_app}
+    password: ${DB_PASSWORD:kaamsetu_secure_pass_2026}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 10
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 20000
+      pool-name: KaamSetuHikariProdPool
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 50
+          order_inserts: true
+          order_updates: true
+
+# KaamSetu Production Security & Auth Configuration
+kaamsetu:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    expiration-ms: 604800000 # 7 days
+    refresh-expiration-ms: 2592000000 # 30 days
+  otp:
+    expiration-seconds: 300 # 5 minutes
+    rate-limit-per-hour: 5
+    default-test-otp: "" # Disabled in production
+  cors:
+    allowed-origins:
+      - "https://kaamsetu.org"
+      - "https://app.kaamsetu.org"
+      - "http://localhost"
+      - "http://localhost:80"
+
+logging:
+  level:
+    root: INFO
+    com.kaamsetu: INFO
+    org.springframework.security: WARN
+    org.hibernate: ERROR

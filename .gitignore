@@ -1,0 +1,48 @@
+# Maven & Java build artifacts
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Node / Frontend artifacts
+node_modules/
+dist/
+build/
+.npm
+.cache
+
+# Logs & Temporary Files
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor configurations
+.idea/
+*.iml
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment Secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# OS Artifacts
+[Bb]in/
+[Oo]bj/

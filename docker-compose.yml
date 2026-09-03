@@ -1,0 +1,118 @@
+# ==============================================================================
+# 🌾 KaamSetu (कामसेतू) — Full Production Docker Compose Stack
+# Services: MySQL 8.0, Redis 7, Spring Boot 3 API, Nginx PWA Reverse Proxy
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Database: MySQL 8.0 with Persistent Volume & Health Check
+  # ----------------------------------------------------------------------------
+  kaamsetu-mysql:
+    image: mysql:8.0
+    container_name: kaamsetu-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: ${DB_NAME:-kaamsetu_db}
+      MYSQL_USER: ${DB_USER:-kaamsetu_app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-kaamsetu_secure_pass_2026}
+      TZ: Asia/Kolkata
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --max_connections=250
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-root123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - kaamsetu-net
+
+  # ----------------------------------------------------------------------------
+  # 2. In-Memory Cache: Redis 7 for Rate Limiting & Distributed Token Cache
+  # ----------------------------------------------------------------------------
+  kaamsetu-redis:
+    image: redis:7-alpine
+    container_name: kaamsetu-redis
+    restart: always
+    command: redis-server --save 60 1 --loglevel warning --requirepass ${REDIS_PASSWORD:-kaamsetu_redis_2026}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-kaamsetu_redis_2026}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - kaamsetu-net
+
+  # ----------------------------------------------------------------------------
+  # 3. Backend: Spring Boot 3 Modular Monolith REST API
+  # ----------------------------------------------------------------------------
+  kaamsetu-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: kaamsetu/backend-api:1.0.0
+    container_name: kaamsetu-backend
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: kaamsetu-mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-kaamsetu_db}
+      DB_USER: ${DB_USER:-kaamsetu_app}
+      DB_PASSWORD: ${DB_PASSWORD:-kaamsetu_secure_pass_2026}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      REDIS_HOST: kaamsetu-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-kaamsetu_redis_2026}
+      TZ: Asia/Kolkata
+    ports:
+      - "8088:8088"
+    depends_on:
+      kaamsetu-mysql:
+        condition: service_healthy
+      kaamsetu-redis:
+        condition: service_healthy
+    networks:
+      - kaamsetu-net
+
+  # ----------------------------------------------------------------------------
+  # 4. Frontend: Nginx PWA & Reverse Proxy
+  # ----------------------------------------------------------------------------
+  kaamsetu-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kaamsetu/frontend-pwa:1.0.0
+    container_name: kaamsetu-frontend
+    restart: always
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    depends_on:
+      - kaamsetu-backend
+    networks:
+      - kaamsetu-net
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  kaamsetu-net:
+    driver: bridge

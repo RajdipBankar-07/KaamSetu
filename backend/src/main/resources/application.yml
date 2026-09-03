@@ -1,0 +1,96 @@
+server:
+  port: 8090
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: kaamsetu-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/kaamsetu_db;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE;MODE=MySQL;NON_KEYWORDS=USER}
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+      idle-timeout: 30000
+      connection-timeout: 20000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+        type:
+          preferred_uuid_jdbc_type: CHAR
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  mail:
+    host: ${EMAIL_HOST:smtp.gmail.com}
+    port: ${EMAIL_PORT:587}
+    username: ${EMAIL_USERNAME:rajdipbankar786@gmail.com}
+    password: ${EMAIL_PASSWORD:klfllrusjfzazogl}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: "*"
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+
+# KaamSetu Security & Real Authentication Provider Configuration
+kaamsetu:
+  auth:
+    mock-mode: ${AUTH_MOCK_MODE:false}
+  jwt:
+    # 256-bit secret key for HMAC-SHA256 signing
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    expiration-ms: 604800000 # 7 days
+    refresh-expiration-ms: 2592000000 # 30 days
+  otp:
+    expiration-seconds: 300 # 5 minutes
+    resend-cooldown-seconds: 60 # 1 minute cooldown between resends
+    max-verification-attempts: 5 # Lock after 5 failed attempts
+    rate-limit-per-hour: 5
+  sms:
+    provider: ${SMS_PROVIDER:FAST2SMS} # FAST2SMS, TWILIO, AWS_SNS
+    api-key: ${SMS_PROVIDER_API_KEY:}
+    sender-id: ${SMS_PROVIDER_SENDER:KMSETU}
+    endpoint-url: ${SMS_PROVIDER_URL:https://www.fast2sms.com/dev/bulkV2}
+  email:
+    verification-expiration-hours: 24
+    from-address: ${EMAIL_FROM_ADDRESS:no-reply@kaamsetu.org}
+    from-name: "KaamSetu कामसेतू"
+  app:
+    base-url: ${APP_BASE_URL:http://localhost:8088}
+  cors:
+    allowed-origins:
+      - "http://localhost:3000"
+      - "http://localhost:5173"
+      - "http://127.0.0.1:5500"
+      - "file://"
+
+management:
+  tracing:
+    enabled: false
+  zipkin:
+    tracing:
+      endpoint: ""
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method

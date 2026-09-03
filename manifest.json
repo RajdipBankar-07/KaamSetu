@@ -1,0 +1,27 @@
+{
+  "name": "KaamSetu (कामसेतू) — Rural & Village Local Jobs Marketplace",
+  "short_name": "KaamSetu",
+  "description": "Hyper-local, multilingual SaaS platform connecting rural workers with local employers across agriculture, construction, and household sectors.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d6840",
+  "theme_color": "#0d6840",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "mr",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "Logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "Logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}
