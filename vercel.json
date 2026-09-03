@@ -5,15 +5,10 @@
     {
       "source": "/api/v1/:path*",
       "destination": "https://kaamsetu-backend.onrender.com/api/v1/:path*"
-    }
-  ],
-  "routes": [
-    {
-      "handle": "filesystem"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

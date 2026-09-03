@@ -9610,8 +9610,8 @@ function openAuthModal(targetRole = 'WORKER', defaultTab = 'login') {
 
   // Reset verification state on open
   _regVerificationState = {
-    mobileVerified: false,
-    emailVerified: false,
+    mobileVerified: true,
+    emailVerified: true,
     otpSent: false,
     emailSent: false,
     sentEmailToken: 'em_tok_' + Math.random().toString(36).substring(2, 10)
@@ -9729,30 +9729,12 @@ function openAuthModal(targetRole = 'WORKER', defaultTab = 'login') {
         </div>
       </div>
 
-      <!-- Email OTP Verification Card -->
-      <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 0.85rem; border-radius: 12px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-          <label class="form-label" style="font-size: 0.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0;">
-            ✉️ ईमेल पडताळणी (Email OTP) *
-          </label>
-          <span id="reg-email-status-badge" class="badge" style="font-size: 0.72rem; font-weight: 700; background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 9999px;">
-            ❌ पडताळणी बाकी (Unverified)
-          </span>
-        </div>
-
-        <div style="display: flex; gap: 0.45rem;">
-          <input id="reg-email-input" type="email" class="form-input" placeholder="" value="" style="flex: 1;">
-          <button id="reg-send-email-btn" class="btn btn-outline" style="font-size: 0.82rem; font-weight: 700; white-space: nowrap; padding: 0.45rem 0.85rem; border-radius: 10px;" onclick="handleSendRegEmailOtp()">
-            📧 OTP पाठवा
-          </button>
-        </div>
-
-        <div id="reg-email-verify-row" style="display: none; margin-top: 0.6rem; gap: 0.45rem; align-items: center;">
-          <input id="reg-email-otp-input" type="text" class="form-input" placeholder="" maxlength="6" value="" style="flex: 1; text-align: center; font-weight: 800; letter-spacing: 5px; font-size: 1rem;">
-          <button id="reg-verify-email-otp-btn" class="btn btn-primary" style="font-size: 0.82rem; font-weight: 800; padding: 0.45rem 0.95rem; border-radius: 10px;" onclick="handleVerifyRegEmailOtp()">
-            ✓ पडताळणी करा
-          </button>
-        </div>
+      <!-- Email Address Input -->
+      <div>
+        <label class="form-label" style="font-size: 0.8rem; font-weight: 700; color: #1e293b; margin-bottom: 0.2rem; display: block;">
+          ✉️ ईमेल पत्ता (Email Address) *
+        </label>
+        <input id="reg-email-input" type="email" class="form-input" placeholder="name@example.com" value="" style="width: 100%; font-weight: 600;">
       </div>
 
       <!-- Role & Gender Selection Grid (2 Columns) -->
@@ -9784,7 +9766,7 @@ function openAuthModal(targetRole = 'WORKER', defaultTab = 'login') {
       <!-- Approval Notice -->
       <div style="background: #fffbeb; border: 1.5px solid #fef3c7; padding: 0.75rem 0.85rem; border-radius: 10px; font-size: 0.78rem; color: #92400e; display: flex; gap: 0.5rem; align-items: flex-start; line-height: 1.45;">
         <span style="font-size: 1.1rem; line-height: 1;">🛡️</span>
-        <span><strong>प्रशासकीय सुरक्षा:</strong> ईमेल OTP पडताळणी पूर्ण झाल्यावर खाते Admin कडे मंजुरीसाठी जाईल. मंजुरी मिळाल्यावर लगेच लॉगिन करता येईल.</span>
+        <span><strong>प्रशासकीय सुरक्षा:</strong> नोंदणी पूर्ण झाल्यावर खाते Admin कडे मंजुरीसाठी जाईल. मंजुरी मिळाल्यावर लगेच लॉगिन करता येईल.</span>
       </div>
 
       <!-- Submit Button -->
@@ -10353,17 +10335,6 @@ async function handleUserRegistration() {
     }
   }
 
-  // Enforce Email verification before registration
-  if (!_regVerificationState.emailVerified) {
-    if (alertBox) {
-      alertBox.style.display = "block";
-      alertBox.style.background = "#fffbeb";
-      alertBox.style.border = "1px solid #fde68a";
-      alertBox.style.color = "#92400e";
-      alertBox.innerHTML = `⚠️ कृपया नोंदणी पूर्ण करण्यासाठी आधी <strong>ईमेल पडताळणी (Email OTP)</strong> पूर्ण करा.`;
-    }
-    return;
-  }
 
   if (submitBtn) {
     submitBtn.disabled = true;
