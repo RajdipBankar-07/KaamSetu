@@ -986,13 +986,9 @@ function renderCurrentView() {
   }
 
   // Strict Backend Availability Access Gate:
-  // If backend is offline, prevent unverified access into Admin or functional dashboards
+  // If backend is offline and user is unauthenticated, prevent direct unverified entry
   if (!isOnline) {
-    if (view === "admin") {
-      renderServerOfflineView(container);
-      return;
-    }
-    if (!isLoggedIn && (view === "home" || view === "myJobs" || view === "applications" || view === "messages" || view === "profile")) {
+    if (!isLoggedIn && (view === "admin" || view === "home" || view === "myJobs" || view === "applications" || view === "messages" || view === "profile")) {
       renderServerOfflineView(container);
       return;
     }
