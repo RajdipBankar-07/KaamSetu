@@ -116,6 +116,10 @@ const AuthManager = (function () {
         db[offlineUser.username.toLowerCase()] = offlineUser;
         if (offlineUser.mobile) {
             db[offlineUser.mobile] = offlineUser;
+            const digits = offlineUser.mobile.replace(/\D/g, '');
+            if (digits.length >= 10) {
+                db[digits.slice(-10)] = offlineUser;
+            }
         }
         storage.setItem('kaamsetu_users_db', JSON.stringify(db));
 
@@ -151,10 +155,10 @@ const AuthManager = (function () {
             try {
                 authData = await ApiClient.loginWithPassword(cleanIdentifier, password);
             } catch (apiErr) {
-                if ((apiErr.status === 401 || apiErr.status === 400) && !apiErr.isNetworkError && !apiErr.isMixedContentBlocked) {
+                if (apiErr.message && apiErr.message.includes('waiting for administrator approval')) {
                     throw apiErr;
                 }
-                console.warn('⚠️ [AuthManager] Backend login unavailable. Falling back to local offline login:', apiErr.message);
+                console.warn('⚠️ [AuthManager] Backend login attempt note. Falling back to local offline registry:', apiErr.message);
             }
         }
 
@@ -165,16 +169,20 @@ const AuthManager = (function () {
             };
             const db = storage.getJSON ? storage.getJSON('kaamsetu_users_db', {}) : JSON.parse(localStorage.getItem('kaamsetu_users_db') || '{}');
             const lowerId = cleanIdentifier.toLowerCase();
+            const digits = cleanIdentifier.replace(/\D/g, '');
             let matchedUser = db[lowerId] || db[cleanIdentifier];
 
             if (!matchedUser) {
                 for (const k in db) {
                     const u = db[k];
-                    if (u && (
+                    if (!u) continue;
+                    const uMob = String(u.mobile || '').replace(/\D/g, '');
+                    if (
                         (u.username && u.username.toLowerCase() === lowerId) ||
-                        (u.mobile && (u.mobile === cleanIdentifier || u.mobile.replace(/\D/g, '') === cleanIdentifier.replace(/\D/g, ''))) ||
+                        (digits.length >= 10 && uMob.length >= 10 && uMob.endsWith(digits.slice(-10))) ||
+                        (u.mobile && (u.mobile === cleanIdentifier || uMob === digits)) ||
                         (u.email && u.email.toLowerCase() === lowerId)
-                    )) {
+                    ) {
                         matchedUser = u;
                         break;
                     }
@@ -205,8 +213,8 @@ const AuthManager = (function () {
         }
 
         // Verify account is approved
-        if (authData.user && authData.user.status === 'PENDING') {
-            throw new Error('Your account is waiting for administrator approval.');
+        if (authData.user && (authData.user.status === 'PENDING' || authData.user.trustStatus === 'PENDING')) {
+            throw new Error(window.i18n ? window.i18n.t('auth.pendingApproval') : 'Your account is waiting for administrator approval.');
         }
 
         state.token = authData.accessToken;

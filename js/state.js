@@ -217,66 +217,78 @@ class AppState {
       this.data.notifications = (initData.notifications && Array.isArray(initData.notifications)) ? [...initData.notifications] : [];
     }
 
-    if (!Array.isArray(this.data.pendingUsers) || (savedState === null && this.data.pendingUsers.length === 0)) {
-      this.data.pendingUsers = [
-        {
-          id: "u_pend_1",
-          username: "kailas_ghadge",
-          fullName: "कैलास घाडगे (Kailas Ghadge)",
-          mobile: "+91 98225 67890",
-          email: "kailas.ghadge@kaamsetu.org",
-          role: "WORKER",
-          gender: "MALE",
-          avatar: "👷‍♂️",
-          village: "रांजणगाव (Ranjangaon)",
-          taluka: "Shirur",
-          district: "Pune Rural",
-          state: "Maharashtra",
-          country: "India",
-          minDailyWage: 650,
-          minWage: 650,
-          travelRadiusKm: 15,
-          experienceYears: 4,
-          rating: 5.0,
-          trustStatus: "PENDING",
-          trust: "HEALTHY",
-          skills: ["cat.agriculture", "cat.driving"],
-          bio: "अनुभवी ट्रॅक्टर चालक व शेती कामाचे कारागीर. वेळेवर हजर राहण्याची खात्री.",
-          mobileVerified: true,
-          emailVerified: true,
-          status: "PENDING",
-          registrationDate: "आज सकाळी 09:15 AM"
-        },
-        {
-          id: "u_pend_2",
-          username: "dnyaneshwar_agro",
-          fullName: "ज्ञानेश्वर थोरात (Dnyaneshwar Thorat)",
-          mobile: "+91 94231 98765",
-          email: "thorat.agro@kaamsetu.org",
-          role: "PROVIDER",
-          providerType: "FARMER",
-          type: "provider.type.farmer",
-          gender: "MALE",
-          avatar: "👨‍🌾",
-          businessName: "थोरात ॲग्रो फार्म्स (Thorat Agro)",
-          village: "सासवड (Saswad)",
-          taluka: "Saswad",
-          district: "Pune Rural",
-          state: "Maharashtra",
-          country: "India",
-          rating: 5.0,
-          paymentReliability: 5.0,
-          trustStatus: "PENDING",
-          trust: "HEALTHY",
-          facilities: ["पिण्याचे स्वच्छ पाणी", "दुपारचा चहा व सावली", "वेळेवर दैनिक मोबदला", "सुरक्षित कार्यस्थळ"],
-          bio: "सासवड परिसरातील प्रगतिशील शेतकरी. भाजीपाला व कांदा उत्पादक. कामगारांना वेळेवर रोख मोबदला दिला जातो.",
-          mobileVerified: true,
-          emailVerified: true,
-          status: "PENDING",
-          registrationDate: "आज सकाळी 10:30 AM"
-        }
-      ];
+    // Restore Pending Users from dedicated registry or savedState
+    let loadedPendingUsers = SafeStorage.getJSON("kaamsetu_pending_users_registry", null);
+    if (!Array.isArray(loadedPendingUsers) || loadedPendingUsers.length === 0) {
+      if (savedState && Array.isArray(savedState.pendingUsers)) {
+        loadedPendingUsers = savedState.pendingUsers;
+      }
     }
+    if (!Array.isArray(loadedPendingUsers)) {
+      if (savedState === null) {
+        loadedPendingUsers = [
+          {
+            id: "u_pend_1",
+            username: "kailas_ghadge",
+            fullName: "कैलास घाडगे (Kailas Ghadge)",
+            mobile: "+91 98225 67890",
+            email: "kailas.ghadge@kaamsetu.org",
+            role: "WORKER",
+            gender: "MALE",
+            avatar: "👷‍♂️",
+            village: "रांजणगाव (Ranjangaon)",
+            taluka: "Shirur",
+            district: "Pune Rural",
+            state: "Maharashtra",
+            country: "India",
+            minDailyWage: 650,
+            minWage: 650,
+            travelRadiusKm: 15,
+            experienceYears: 4,
+            rating: 5.0,
+            trustStatus: "PENDING",
+            trust: "HEALTHY",
+            skills: ["cat.agriculture", "cat.driving"],
+            bio: "अनुभवी ट्रॅक्टर चालक व शेती कामाचे कारागीर. वेळेवर हजर राहण्याची खात्री.",
+            mobileVerified: true,
+            emailVerified: true,
+            status: "PENDING",
+            registrationDate: "आज सकाळी 09:15 AM"
+          },
+          {
+            id: "u_pend_2",
+            username: "dnyaneshwar_agro",
+            fullName: "ज्ञानेश्वर थोरात (Dnyaneshwar Thorat)",
+            mobile: "+91 94231 98765",
+            email: "thorat.agro@kaamsetu.org",
+            role: "PROVIDER",
+            providerType: "FARMER",
+            type: "provider.type.farmer",
+            gender: "MALE",
+            avatar: "👨‍🌾",
+            businessName: "थोरात ॲग्रो फार्म्स (Thorat Agro)",
+            village: "सासवड (Saswad)",
+            taluka: "Saswad",
+            district: "Pune Rural",
+            state: "Maharashtra",
+            country: "India",
+            rating: 5.0,
+            paymentReliability: 5.0,
+            trustStatus: "PENDING",
+            trust: "HEALTHY",
+            facilities: ["पिण्याचे स्वच्छ पाणी", "दुपारचा चहा व सावली", "वेळेवर दैनिक मोबदला", "सुरक्षित कार्यस्थळ"],
+            bio: "सासवड परिसरातील प्रगतिशील शेतकरी. भाजीपाला व कांदा उत्पादक. कामगारांना वेळेवर रोख मोबदला दिला जातो.",
+            mobileVerified: true,
+            emailVerified: true,
+            status: "PENDING",
+            registrationDate: "आज सकाळी 10:30 AM"
+          }
+        ];
+      } else {
+        loadedPendingUsers = [];
+      }
+    }
+    this.data.pendingUsers = loadedPendingUsers;
     if (!Array.isArray(this.data.auditLogs)) {
       this.data.auditLogs = (initData.auditLogs ? [...initData.auditLogs] : []);
     }
@@ -529,6 +541,8 @@ class AppState {
       if (!this.data) this.data = {};
       if (!Array.isArray(this.data.pendingUsers)) this.data.pendingUsers = [];
       const db = SafeStorage.getJSON('kaamsetu_users_db', {});
+      const appReg = SafeStorage.getJSON('kaamsetu_approved_users_registry', {});
+      const rejReg = SafeStorage.getJSON('kaamsetu_rejected_users_registry', {});
       const currentList = [];
       const seenKeys = new Set();
 
@@ -541,6 +555,7 @@ class AppState {
         if (obj.name) keys.push(String(obj.name).toLowerCase());
         if (obj.fullName) keys.push(String(obj.fullName).toLowerCase());
         if (obj.mobile) {
+          keys.push(String(obj.mobile).toLowerCase());
           const digits = String(obj.mobile).replace(/\D/g, '');
           if (digits.length >= 10) keys.push(digits.slice(-10));
         }
@@ -557,10 +572,104 @@ class AppState {
         keys.forEach(k => seenKeys.add(k));
       };
 
-      // 1. Keep existing pending users in state (if not approved/rejected)
+      const isPermanentlyApprovedOrRejected = (obj) => {
+        if (!obj) return false;
+        if (obj.status === 'APPROVED' || obj.status === 'REJECTED') return true;
+
+        const objKeys = getKeys(obj);
+        for (const k of objKeys) {
+          if (appReg && (appReg[k] || appReg[`@${k}`])) return true;
+          if (rejReg && (rejReg[k] || rejReg[`@${k}`])) return true;
+        }
+
+        // Check against active workers collection
+        if (this.data.workers && Array.isArray(this.data.workers)) {
+          const inWorkers = this.data.workers.some(w => {
+            if (!w) return false;
+            const wid = String(w.id || '').toLowerCase();
+            const wun = String(w.username || '').toLowerCase();
+            const wnm = String(w.name || w.fullName || '').toLowerCase();
+            const wmb = String(w.mobile || '').replace(/\D/g, '');
+            const wShortMb = wmb.length >= 10 ? wmb.slice(-10) : '';
+
+            const oUser = String(obj.username || '').toLowerCase();
+            const oId = String(obj.id || '').toLowerCase();
+            const oBack = String(obj.backendId || '').toLowerCase();
+            const oName = String(obj.name || obj.fullName || '').toLowerCase();
+            const oMob = String(obj.mobile || '').replace(/\D/g, '');
+            const oShortMob = oMob.length >= 10 ? oMob.slice(-10) : '';
+
+            return (oId && wid === oId) ||
+                   (oBack && wid === oBack) ||
+                   (oUser && wun === oUser) ||
+                   (oName && wnm === oName) ||
+                   (oShortMob && wShortMb && oShortMob === wShortMb);
+          });
+          if (inWorkers) return true;
+        }
+
+        // Check against active providers collection
+        if (this.data.providers && Array.isArray(this.data.providers)) {
+          const inProviders = this.data.providers.some(p => {
+            if (!p) return false;
+            const pid = String(p.id || '').toLowerCase();
+            const pun = String(p.username || '').toLowerCase();
+            const pnm = String(p.name || p.fullName || '').toLowerCase();
+            const pmb = String(p.mobile || '').replace(/\D/g, '');
+            const pShortMb = pmb.length >= 10 ? pmb.slice(-10) : '';
+
+            const oUser = String(obj.username || '').toLowerCase();
+            const oId = String(obj.id || '').toLowerCase();
+            const oBack = String(obj.backendId || '').toLowerCase();
+            const oName = String(obj.name || obj.fullName || '').toLowerCase();
+            const oMob = String(obj.mobile || '').replace(/\D/g, '');
+            const oShortMob = oMob.length >= 10 ? oMob.slice(-10) : '';
+
+            return (oId && pid === oId) ||
+                   (oBack && pid === oBack) ||
+                   (oUser && pun === oUser) ||
+                   (oName && pnm === oName) ||
+                   (oShortMob && pShortMb && oShortMob === pShortMb);
+          });
+          if (inProviders) return true;
+        }
+
+        // Check kaamsetu_users_db for approved or verified status
+        if (db) {
+          const oUser = String(obj.username || '').toLowerCase();
+          const oId = String(obj.id || '').toLowerCase();
+          const oMob = String(obj.mobile || '').replace(/\D/g, '');
+          const oShortMob = oMob.length >= 10 ? oMob.slice(-10) : '';
+
+          if (oUser && db[oUser] && (db[oUser].status === 'APPROVED' || db[oUser].verified === true)) return true;
+          if (oShortMob && db[oShortMob] && (db[oShortMob].status === 'APPROVED' || db[oShortMob].verified === true)) return true;
+          if (oId && db[oId] && (db[oId].status === 'APPROVED' || db[oId].verified === true)) return true;
+
+          for (const k in db) {
+            const u = db[k];
+            if (!u) continue;
+            if (u.status === 'APPROVED' || u.status === 'REJECTED' || u.verified === true) {
+              const uUser = String(u.username || '').toLowerCase();
+              const uMob = String(u.mobile || '').replace(/\D/g, '');
+              const uShortMob = uMob.length >= 10 ? uMob.slice(-10) : '';
+              const uId = String(u.id || '').toLowerCase();
+
+              if ((oUser && uUser && oUser === uUser) ||
+                  (oId && uId && oId === uId) ||
+                  (oShortMob && uShortMob && oShortMob === uShortMob)) {
+                return true;
+              }
+            }
+          }
+        }
+
+        return false;
+      };
+
+      // 1. Keep existing pending users in state (if NOT approved/rejected)
       for (const pu of this.data.pendingUsers) {
         if (!pu) continue;
-        if (pu.status === 'APPROVED' || pu.status === 'REJECTED') continue;
+        if (isPermanentlyApprovedOrRejected(pu)) continue;
         if (isSeen(pu)) continue;
         markSeen(pu);
         currentList.push(pu);
@@ -569,9 +678,10 @@ class AppState {
       // 2. Scan kaamsetu_users_db for any user registered with status === 'PENDING'
       for (const k in db) {
         const u = db[k];
-        if (u && (u.status === 'PENDING' || u.trustStatus === 'PENDING')) {
-          if (isSeen(u)) continue;
-
+        if (!u) continue;
+        if (isPermanentlyApprovedOrRejected(u)) continue;
+        if (isSeen(u)) continue;
+        if (u.status === 'PENDING' || (u.trustStatus === 'PENDING' && u.verified !== true)) {
           const wage = u.minDailyWage || u.minWage || 650;
           const pItem = {
             id: u.id || `u_pend_${u.username || Date.now()}`,
@@ -608,7 +718,7 @@ class AppState {
             status: 'PENDING',
             registrationDate: u.registrationDate || 'आज'
           };
-          if (!isSeen(pItem)) {
+          if (!isSeen(pItem) && !isPermanentlyApprovedOrRejected(pItem)) {
             markSeen(pItem);
             currentList.unshift(pItem);
           }
@@ -616,6 +726,7 @@ class AppState {
       }
 
       this.data.pendingUsers = currentList;
+      SafeStorage.setItem("kaamsetu_pending_users_registry", currentList);
     } catch (e) {
       console.warn("syncAllPendingUsersFromRegistry error:", e);
     }
@@ -1094,6 +1205,9 @@ class AppState {
       }
       if (Array.isArray(this.data.adminConversations)) {
         SafeStorage.setItem("kaamsetu_admin_conversations_registry", this.data.adminConversations);
+      }
+      if (Array.isArray(this.data.pendingUsers)) {
+        SafeStorage.setItem("kaamsetu_pending_users_registry", this.data.pendingUsers);
       }
       const compacted = SafeStorage.compactState(this.data);
       SafeStorage.setItem("kaamsetu_state", compacted);

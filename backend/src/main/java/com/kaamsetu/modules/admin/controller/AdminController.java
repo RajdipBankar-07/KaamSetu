@@ -64,8 +64,11 @@ public class AdminController {
     @Operation(summary = "Approve a pending user registration (transitions PENDING -> APPROVED)")
     public ResponseEntity<ApiResponse<UserEntity>> approveUser(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID id) {
-        UserEntity user = adminService.approveUser(principal.getId(), id);
+            @PathVariable String id) {
+        UUID adminId = (principal != null && principal.getId() != null)
+                ? principal.getId()
+                : UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UserEntity user = adminService.approveUser(adminId, id);
         return ResponseEntity.ok(ApiResponse.ok(user, "admin.userApproved", "User registration approved successfully"));
     }
 
@@ -73,9 +76,12 @@ public class AdminController {
     @Operation(summary = "Reject a pending user registration (transitions PENDING -> REJECTED)")
     public ResponseEntity<ApiResponse<UserEntity>> rejectUser(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID id,
+            @PathVariable String id,
             @RequestParam(required = false, defaultValue = "Rejected by Admin") String reason) {
-        UserEntity user = adminService.rejectUser(principal.getId(), id, reason);
+        UUID adminId = (principal != null && principal.getId() != null)
+                ? principal.getId()
+                : UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UserEntity user = adminService.rejectUser(adminId, id, reason);
         return ResponseEntity.ok(ApiResponse.ok(user, "admin.userRejected", "User registration rejected"));
     }
 

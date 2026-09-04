@@ -238,14 +238,25 @@ async function syncPendingUsersFromBackend() {
       const backendPending = await ApiClient.getPendingUsers();
       if (Array.isArray(backendPending) && window.appState) {
         if (!window.appState.data.pendingUsers) window.appState.data.pendingUsers = [];
+        const appReg = (window.SafeStorage ? window.SafeStorage.getJSON('kaamsetu_approved_users_registry', {}) : JSON.parse(localStorage.getItem('kaamsetu_approved_users_registry') || '{}'));
+        const rejReg = (window.SafeStorage ? window.SafeStorage.getJSON('kaamsetu_rejected_users_registry', {}) : JSON.parse(localStorage.getItem('kaamsetu_rejected_users_registry') || '{}'));
         const seen = new Set();
         const merged = [];
 
-        // Add backend pending users
+        // Add backend pending users (filtering out any approved or rejected users)
         for (const bu of backendPending) {
           if (!bu) continue;
           const k1 = (bu.id || '').toLowerCase();
           const k2 = (bu.username || '').toLowerCase();
+          const k3 = String(bu.mobile || '').replace(/\D/g, '');
+          const k3Short = k3.length >= 10 ? k3.slice(-10) : '';
+
+          if (bu.status === 'APPROVED' || bu.status === 'REJECTED') continue;
+          if (k1 && (appReg[k1] || rejReg[k1])) continue;
+          if (k2 && (appReg[k2] || rejReg[k2])) continue;
+          if (k3 && (appReg[k3] || rejReg[k3])) continue;
+          if (k3Short && (appReg[k3Short] || rejReg[k3Short])) continue;
+
           if (k1) seen.add(k1);
           if (k2) seen.add(k2);
 
@@ -283,11 +294,20 @@ async function syncPendingUsersFromBackend() {
           });
         }
 
-        // Keep local pending users not in backend
+        // Keep local pending users not in backend (excluding approved or rejected)
         for (const lu of window.appState.data.pendingUsers) {
           if (!lu) continue;
+          if (lu.status === 'APPROVED' || lu.status === 'REJECTED') continue;
           const k1 = (lu.id || '').toLowerCase();
           const k2 = (lu.username || '').toLowerCase();
+          const k3 = String(lu.mobile || '').replace(/\D/g, '');
+          const k3Short = k3.length >= 10 ? k3.slice(-10) : '';
+
+          if (k1 && (appReg[k1] || rejReg[k1])) continue;
+          if (k2 && (appReg[k2] || rejReg[k2])) continue;
+          if (k3 && (appReg[k3] || rejReg[k3])) continue;
+          if (k3Short && (appReg[k3Short] || rejReg[k3Short])) continue;
+
           if ((k1 && seen.has(k1)) || (k2 && seen.has(k2))) continue;
           if (k1) seen.add(k1);
           if (k2) seen.add(k2);
@@ -295,6 +315,9 @@ async function syncPendingUsersFromBackend() {
         }
 
         window.appState.data.pendingUsers = merged;
+        if (window.SafeStorage) {
+          window.SafeStorage.setItem('kaamsetu_pending_users_registry', merged);
+        }
       }
     } catch (err) {
       console.info("Pending users backend sync note:", err.message);
@@ -403,6 +426,10 @@ async function initApp() {
 
     // Refresh live database stats & pending ratings
     await refreshLiveStats();
+  }
+
+  if (window.appState && typeof window.appState.syncAllPendingUsersFromRegistry === 'function') {
+    window.appState.syncAllPendingUsersFromRegistry();
   }
 
   if (window.i18n && typeof window.i18n.updateDOM === 'function') {
@@ -986,9 +1013,13 @@ function renderCurrentView() {
   }
 
   // Strict Backend Availability Access Gate:
-  // If backend is offline and user is unauthenticated, prevent direct unverified entry
+  // If backend is offline, prevent unverified access into Admin or functional dashboards
   if (!isOnline) {
-    if (!isLoggedIn && (view === "admin" || view === "home" || view === "myJobs" || view === "applications" || view === "messages" || view === "profile")) {
+    if (view === "admin") {
+      renderServerOfflineView(container);
+      return;
+    }
+    if (!isLoggedIn && (view === "home" || view === "myJobs" || view === "applications" || view === "messages" || view === "profile")) {
       renderServerOfflineView(container);
       return;
     }
@@ -3294,6 +3325,9 @@ async function handleAdminRefresh() {
   if (typeof syncPendingUsersFromBackend === 'function') {
     await syncPendingUsersFromBackend();
   }
+  if (window.appState && typeof window.appState.syncAllPendingUsersFromRegistry === 'function') {
+    window.appState.syncAllPendingUsersFromRegistry();
+  }
   const container = document.getElementById('view-container');
   if (container) renderAdminView(container, "admin");
   showToast("🔄 डेटाबेस व प्रलंबित खाती रिफ्रेश केली!");
@@ -3424,6 +3458,37 @@ function renderAdminView(container, view) {
             <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" onclick="handleAdminRefresh()">${window.i18n.t('admin.refresh')}</button>
           </div>
 
+          ${window._adminApprovedNotice ? `
+            <div class="admin-success-approval-banner animate-fade-in" style="background: #ecfdf5; border: 2px solid #10b981; border-radius: var(--radius-md); padding: 1.15rem 1.4rem; margin-bottom: 1.25rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.9rem;">
+                  <div style="font-size: 2rem; background: #d1fae5; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    ✅
+                  </div>
+                  <div>
+                    <h4 style="font-weight: 800; font-size: 1.1rem; color: #065f46; margin: 0 0 0.25rem 0;">
+                      ${window.i18n.t('admin.userApprovedNoticeTitle') || '🎉 खाते यशस्वीरीत्या पडताळले व मंजूर केले! (User Successfully Verified & Approved)'}
+                    </h4>
+                    <p style="font-size: 0.9rem; color: #047857; margin: 0; line-height: 1.45;">
+                      वापरकर्ता: <strong>${window._adminApprovedNotice.name}</strong> 
+                      <span style="font-family: monospace; font-size: 0.85rem; color: #065f46; background: #d1fae5; padding: 2px 6px; border-radius: 4px;">@${window._adminApprovedNotice.username}</span> • 
+                      भूमिका: <strong>${window._adminApprovedNotice.roleLabel || (window._adminApprovedNotice.role === 'WORKER' ? '👷 कामगार' : '👨‍🌾 नियोक्ता')}</strong> • 
+                      स्थिती: <span class="badge badge-success" style="background: #059669; color: #fff; font-size: 0.75rem; font-weight: 800;">✓ पडताळणी पूर्ण (VERIFIED & ACTIVE)</span>
+                    </p>
+                    <div style="margin-top: 0.4rem; font-size: 0.84rem; color: #065f46; background: rgba(16, 185, 129, 0.1); padding: 0.35rem 0.65rem; border-radius: 6px;">
+                      🔑 <strong>${window.i18n.t('admin.userApprovedNoticeLoginReady') || 'लॉगिन सज्ज: हा वापरकर्ता आता आपल्या वैध युझरनेम किंवा मोबाईल आणि पासवर्डने थेट लॉग इन करू शकतो.'}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; border-color: #059669; color: #059669; background: #fff;" onclick="window._adminApprovedNotice = null; renderApp();">
+                    ✕ बंद करा (Dismiss)
+                  </button>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
           <div style="background: rgba(245, 158, 11, 0.08); border: 1.5px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: #92400e; display: flex; align-items: center; gap: 0.6rem;">
             <span style="font-size: 1.3rem;">🛡️</span>
             <div><strong>${window.i18n.t('admin.verificationAlert')}</strong></div>
@@ -3437,9 +3502,15 @@ function renderAdminView(container, view) {
             </div>
           ` : `
             <div style="display: flex; flex-direction: column; gap: 0.9rem;">
-              ${pendingList.map(pu => `
+              ${pendingList.map(pu => {
+                const puRoleNorm = String(pu.role || 'WORKER').replace(/^ROLE[._]/i, '').toUpperCase();
+                const isWorker = (puRoleNorm === 'WORKER');
+                const roleBadgeText = isWorker ? 
+                  (pu.gender === 'FEMALE' ? '👷‍♀️ ' + window.i18n.t('role.worker') : '👷‍♂️ ' + window.i18n.t('role.worker')) : 
+                  (pu.gender === 'FEMALE' ? '👩‍🌾 ' + window.i18n.t('role.provider') : '👨‍🌾 ' + window.i18n.t('role.provider'));
+                return `
                 <div class="applicant-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding: 1.1rem; border-radius: var(--radius-md); border: 1.5px solid #fde68a; background: #fffbeb;">
-                    <div class="applicant-info-wrap" style="cursor: pointer;" onclick="${pu.role === 'WORKER' ? `openWorkerProfileModal('${pu.fullName.replace(/'/g, "\\'")}')` : `openProviderProfileModal('${pu.fullName.replace(/'/g, "\\'")}')`}" title="${window.i18n.t('admin.viewProfile')}">
+                    <div class="applicant-info-wrap" style="cursor: pointer;" onclick="${isWorker ? `openWorkerProfileModal('${pu.fullName.replace(/'/g, "\\'")}')` : `openProviderProfileModal('${pu.fullName.replace(/'/g, "\\'")}')`}" title="${window.i18n.t('admin.viewProfile')}">
                       <div class="applicant-avatar" style="background: rgba(245, 158, 11, 0.15); font-size: 1.4rem;">
                         ${getUserAvatar(pu)}
                       </div>
@@ -3447,7 +3518,7 @@ function renderAdminView(container, view) {
                         <div class="applicant-name" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                           <strong style="font-size: 1rem; color: #0f172a;">${pu.fullName}</strong>
                           <span style="font-size: 0.82rem; color: var(--text-muted); font-family: monospace;">@${pu.username}</span>
-                          <span class="badge ${pu.role === 'WORKER' ? 'badge-success' : 'badge-open'}" style="font-size: 0.72rem;">${pu.role === 'WORKER' ? (pu.gender === 'FEMALE' ? '👷‍♀️ ' + window.i18n.t('role.worker') : '👷‍♂️ ' + window.i18n.t('role.worker')) : (pu.gender === 'FEMALE' ? '👩‍🌾 ' + window.i18n.t('role.provider') : '👨‍🌾 ' + window.i18n.t('role.provider'))}</span>
+                          <span class="badge ${isWorker ? 'badge-success' : 'badge-open'}" style="font-size: 0.72rem;">${roleBadgeText}</span>
                           <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; font-size: 0.72rem; font-weight: 700;">⏳ PENDING APPROVAL</span>
                           <span style="font-size: 0.72rem; color: #0d6840; font-weight: 800; background: #e8f5e9; padding: 0.1rem 0.45rem; border-radius: 6px; border: 1px solid #c8e6c9;">${window.i18n.t('admin.viewProfile')}</span>
                         </div>
@@ -3478,9 +3549,9 @@ function renderAdminView(container, view) {
                       <button class="btn btn-danger" style="padding: 0.45rem 0.8rem; font-size: 0.85rem; border-radius: 8px;" onclick="handleRejectPendingUser('${pu.id}')">
                         ${window.i18n.t('admin.reject')}
                       </button>
-                    </div>
                   </div>
-              `).join('')}
+                `;
+              }).join('')}
             </div>
           `}
         </div>
@@ -3601,6 +3672,37 @@ function renderAdminView(container, view) {
 
           ${window._adminUserSubTab === 'pending' ? `
             <!-- PENDING APPROVALS LIST -->
+            ${window._adminApprovedNotice ? `
+              <div class="admin-success-approval-banner animate-fade-in" style="background: #ecfdf5; border: 2px solid #10b981; border-radius: var(--radius-md); padding: 1.15rem 1.4rem; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 0.9rem;">
+                    <div style="font-size: 2rem; background: #d1fae5; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      ✅
+                    </div>
+                    <div>
+                      <h4 style="font-weight: 800; font-size: 1.1rem; color: #065f46; margin: 0 0 0.25rem 0;">
+                        ${window.i18n.t('admin.userApprovedNoticeTitle') || '🎉 खाते यशस्वीरीत्या पडताळले व मंजूर केले! (User Successfully Verified & Approved)'}
+                      </h4>
+                      <p style="font-size: 0.9rem; color: #047857; margin: 0; line-height: 1.45;">
+                        वापरकर्ता: <strong>${window._adminApprovedNotice.name}</strong> 
+                        <span style="font-family: monospace; font-size: 0.85rem; color: #065f46; background: #d1fae5; padding: 2px 6px; border-radius: 4px;">@${window._adminApprovedNotice.username}</span> • 
+                        भूमिका: <strong>${window._adminApprovedNotice.roleLabel || (window._adminApprovedNotice.role === 'WORKER' ? '👷 कामगार' : '👨‍🌾 नियोक्ता')}</strong> • 
+                        स्थिती: <span class="badge badge-success" style="background: #059669; color: #fff; font-size: 0.75rem; font-weight: 800;">✓ पडताळणी पूर्ण (VERIFIED & ACTIVE)</span>
+                      </p>
+                      <div style="margin-top: 0.4rem; font-size: 0.84rem; color: #065f46; background: rgba(16, 185, 129, 0.1); padding: 0.35rem 0.65rem; border-radius: 6px;">
+                        🔑 <strong>${window.i18n.t('admin.userApprovedNoticeLoginReady') || 'लॉगिन सज्ज: हा वापरकर्ता आता आपल्या वैध युझरनेम किंवा मोबाईल आणि पासवर्डने थेट लॉग इन करू शकतो.'}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button class="btn btn-outline" style="padding: 0.35rem 0.75rem; font-size: 0.82rem; border-color: #059669; color: #059669; background: #fff;" onclick="window._adminApprovedNotice = null; renderApp();">
+                      ✕ बंद करा (Dismiss)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
             <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius-md); padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.85rem; color: #92400e;">
               🛡️ <strong>${window.i18n.t('admin.verificationAlert')}</strong>
             </div>
@@ -3613,9 +3715,15 @@ function renderAdminView(container, view) {
               </div>
             ` : `
               <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                ${(window.appState.data.pendingUsers || []).map(pu => `
+                ${(window.appState.data.pendingUsers || []).map(pu => {
+                  const puRoleNorm = String(pu.role || 'WORKER').replace(/^ROLE[._]/i, '').toUpperCase();
+                  const isWorker = (puRoleNorm === 'WORKER');
+                  const roleBadgeText = isWorker ? 
+                    (pu.gender === 'FEMALE' ? '👷‍♀️ ' + window.i18n.t('role.worker') : '👷‍♂️ ' + window.i18n.t('role.worker')) : 
+                    (pu.gender === 'FEMALE' ? '👩‍🌾 ' + window.i18n.t('role.provider') : '👨‍🌾 ' + window.i18n.t('role.provider'));
+                  return `
                   <div class="applicant-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding: 1.1rem; border-radius: var(--radius-md); border: 1.5px solid #fde68a; background: #fffbeb;">
-                    <div class="applicant-info-wrap" style="cursor: pointer;" onclick="${pu.role === 'WORKER' ? `openWorkerProfileModal('${(pu.fullName || pu.name).replace(/'/g, "\\'")}')` : `openProviderProfileModal('${(pu.fullName || pu.name).replace(/'/g, "\\'")}')`}">
+                    <div class="applicant-info-wrap" style="cursor: pointer;" onclick="${isWorker ? `openWorkerProfileModal('${(pu.fullName || pu.name).replace(/'/g, "\\'")}')` : `openProviderProfileModal('${(pu.fullName || pu.name).replace(/'/g, "\\'")}')`}">
                       <div class="applicant-avatar" style="background: rgba(245, 158, 11, 0.15); font-size: 1.4rem;">
                         ${getUserAvatar(pu)}
                       </div>
@@ -3623,7 +3731,7 @@ function renderAdminView(container, view) {
                         <div class="applicant-name" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                           <strong style="font-size: 1rem; color: #0f172a;">${pu.fullName || pu.name}</strong>
                           <span style="font-size: 0.82rem; color: var(--text-muted); font-family: monospace;">@${pu.username}</span>
-                          <span class="badge ${pu.role === 'WORKER' ? 'badge-success' : 'badge-open'}" style="font-size: 0.72rem;">${pu.role === 'WORKER' ? (pu.gender === 'FEMALE' ? '👷‍♀️ कामगार' : '👷‍♂️ कामगार') : (pu.gender === 'FEMALE' ? '👩‍🌾 नियोक्ता' : '👨‍🌾 नियोक्ता')}</span>
+                          <span class="badge ${isWorker ? 'badge-success' : 'badge-open'}" style="font-size: 0.72rem;">${roleBadgeText}</span>
                           <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; font-size: 0.72rem; font-weight: 700;">⏳ PENDING</span>
                         </div>
                         <div class="applicant-meta-line" style="margin-top: 0.35rem; font-size: 0.82rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center;">
@@ -3643,14 +3751,14 @@ function renderAdminView(container, view) {
 
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                       <button class="btn btn-primary" style="padding: 0.45rem 0.9rem; font-size: 0.85rem; font-weight: 700; border-radius: 8px;" onclick="handleApprovePendingUser('${pu.id}')">
-                        ✓ ${window.i18n.t('admin.approve')}
+                        ${window.i18n.t('admin.approve')}
                       </button>
                       <button class="btn btn-danger" style="padding: 0.45rem 0.8rem; font-size: 0.85rem; border-radius: 8px;" onclick="handleRejectPendingUser('${pu.id}')">
-                        ✕ ${window.i18n.t('admin.reject')}
+                        ${window.i18n.t('admin.reject')}
                       </button>
                     </div>
                   </div>
-                `).join('')}
+                `;}).join('')}
               </div>
             `}
           ` : `
@@ -10407,8 +10515,14 @@ async function handleUserRegistration() {
     // 1. Save to persistent registry kaamsetu_users_db with PENDING status
     try {
       const db = (window.SafeStorage ? window.SafeStorage.getJSON('kaamsetu_users_db', {}) : JSON.parse(localStorage.getItem('kaamsetu_users_db') || '{}'));
-      db[username.toLowerCase()] = Object.assign({}, newPendingUser, { status: 'PENDING', trustStatus: 'PENDING' });
-      if (backendId) db[backendId] = db[username.toLowerCase()];
+      const pendingRecord = Object.assign({}, newPendingUser, { password: password, status: 'PENDING', trustStatus: 'PENDING' });
+      db[username.toLowerCase()] = pendingRecord;
+      if (regPayload.mobile) {
+        db[regPayload.mobile] = pendingRecord;
+        const digits = regPayload.mobile.replace(/\D/g, '');
+        if (digits.length >= 10) db[digits.slice(-10)] = pendingRecord;
+      }
+      if (backendId) db[backendId] = pendingRecord;
       if (window.SafeStorage) {
         window.SafeStorage.setItem('kaamsetu_users_db', JSON.stringify(db));
       } else {
@@ -10448,13 +10562,26 @@ async function handleUserRegistration() {
 
 async function handleApprovePendingUser(userId) {
   const pendingList = window.appState.data.pendingUsers || [];
-  const idx = pendingList.findIndex(u => u.id === userId || (u.backendId && u.backendId === userId));
+  let idx = pendingList.findIndex(u => u && (u.id === userId || (u.backendId && u.backendId === userId)));
+  if (idx === -1) {
+    const cleanId = String(userId || '').trim().toLowerCase();
+    const cleanDigits = cleanId.replace(/\D/g, '');
+    idx = pendingList.findIndex(u => {
+      if (!u) return false;
+      const uUser = String(u.username || '').toLowerCase();
+      const uMob = String(u.mobile || '').replace(/\D/g, '');
+      return (uUser && uUser === cleanId) ||
+             (cleanDigits.length >= 10 && uMob.length >= 10 && uMob.endsWith(cleanDigits.slice(-10))) ||
+             (u.mobile && (u.mobile === userId || uMob === cleanDigits));
+    });
+  }
+
   let approvedUser = null;
   if (idx !== -1) {
     approvedUser = pendingList.splice(idx, 1)[0];
   }
 
-  const targetId = (approvedUser && (approvedUser.backendId || approvedUser.id)) || userId;
+  const targetId = (approvedUser && (approvedUser.backendId || approvedUser.id || approvedUser.username)) || userId;
   if (typeof ApiClient !== 'undefined' && ApiClient.approveUser) {
     try {
       await ApiClient.approveUser(targetId);
@@ -10466,11 +10593,18 @@ async function handleApprovePendingUser(userId) {
   if (approvedUser) {
     approvedUser.status = "APPROVED";
     approvedUser.trust = "HEALTHY";
+    approvedUser.trustStatus = "HEALTHY";
     approvedUser.verified = true;
+    approvedUser.mobileVerified = true;
+    approvedUser.emailVerified = true;
     const wage = approvedUser.minDailyWage || approvedUser.minWage || 650;
     const dist = approvedUser.distanceKm !== undefined ? approvedUser.distanceKm : 2.4;
 
-    if (approvedUser.role === 'WORKER') {
+    // Normalize role string
+    const roleNorm = String(approvedUser.role || 'WORKER').replace(/^ROLE[._]/i, '').toUpperCase();
+    approvedUser.role = roleNorm;
+
+    if (roleNorm === 'WORKER') {
       if (!window.appState.data.workers) window.appState.data.workers = [];
       const wName = approvedUser.fullName || approvedUser.name || approvedUser.username;
       const wUser = (approvedUser.username || '').toLowerCase();
@@ -10570,21 +10704,82 @@ async function handleApprovePendingUser(userId) {
       }
     }
 
-    // Sync into permanent localStorage users db
+    // 1. Record permanently in kaamsetu_approved_users_registry
+    try {
+      const appReg = (window.SafeStorage ? window.SafeStorage.getJSON('kaamsetu_approved_users_registry', {}) : JSON.parse(localStorage.getItem('kaamsetu_approved_users_registry') || '{}'));
+      const keysToRegister = [];
+      if (userId) keysToRegister.push(String(userId).toLowerCase());
+      if (targetId) keysToRegister.push(String(targetId).toLowerCase());
+      if (approvedUser.id) keysToRegister.push(String(approvedUser.id).toLowerCase());
+      if (approvedUser.backendId) keysToRegister.push(String(approvedUser.backendId).toLowerCase());
+      if (approvedUser.username) keysToRegister.push(String(approvedUser.username).toLowerCase());
+      if (approvedUser.name) keysToRegister.push(String(approvedUser.name).toLowerCase());
+      if (approvedUser.fullName) keysToRegister.push(String(approvedUser.fullName).toLowerCase());
+      if (approvedUser.mobile) {
+        keysToRegister.push(String(approvedUser.mobile).toLowerCase());
+        const d = String(approvedUser.mobile).replace(/\D/g, '');
+        if (d.length >= 10) keysToRegister.push(d.slice(-10));
+      }
+      keysToRegister.forEach(k => { if (k) appReg[k] = true; });
+
+      if (window.SafeStorage) {
+        window.SafeStorage.setItem('kaamsetu_approved_users_registry', JSON.stringify(appReg));
+      }
+      localStorage.setItem('kaamsetu_approved_users_registry', JSON.stringify(appReg));
+    } catch (e) {}
+
+    // 2. Sync into permanent localStorage users db - UPDATE ALL MATCHING ENTRIES
     try {
       const db = (window.SafeStorage ? window.SafeStorage.getJSON('kaamsetu_users_db', {}) : JSON.parse(localStorage.getItem('kaamsetu_users_db') || '{}'));
+      const appUName = (approvedUser.username || '').toLowerCase();
+      const appMobile = (approvedUser.mobile || '').replace(/\D/g, '');
+      const appShortMobile = appMobile.length >= 10 ? appMobile.slice(-10) : '';
+
       for (const k in db) {
         const u = db[k];
-        if (u && (u.id === userId || u.username === approvedUser.username || (approvedUser.backendId && u.id === approvedUser.backendId))) {
+        if (!u) continue;
+        const uId = String(u.id || '').toLowerCase();
+        const uBackId = String(u.backendId || '').toLowerCase();
+        const uUser = String(u.username || '').toLowerCase();
+        const uMob = String(u.mobile || '').replace(/\D/g, '');
+        const uShortMob = uMob.length >= 10 ? uMob.slice(-10) : '';
+
+        const isMatch = (userId && (uId === String(userId).toLowerCase() || uBackId === String(userId).toLowerCase())) ||
+                        (approvedUser.id && uId === String(approvedUser.id).toLowerCase()) ||
+                        (approvedUser.backendId && uBackId === String(approvedUser.backendId).toLowerCase()) ||
+                        (appUName && uUser === appUName) ||
+                        (appShortMobile && uShortMob === appShortMobile);
+
+        if (isMatch) {
           u.status = "APPROVED";
           u.verified = true;
           u.trustStatus = "HEALTHY";
+          u.trust = "HEALTHY";
+          u.mobileVerified = true;
+          u.emailVerified = true;
           u.minWage = wage;
           u.minDailyWage = wage;
           u.distanceKm = dist;
-          break;
         }
       }
+
+      // Ensure primary lookup keys are present with APPROVED status
+      if (appUName) {
+        if (!db[appUName]) {
+          db[appUName] = Object.assign({}, approvedUser, { status: "APPROVED", trustStatus: "HEALTHY", verified: true });
+        } else {
+          db[appUName].status = "APPROVED";
+          db[appUName].verified = true;
+          db[appUName].trustStatus = "HEALTHY";
+        }
+      }
+      if (appShortMobile) {
+        db[appShortMobile] = db[appUName] || approvedUser;
+      }
+      if (approvedUser.mobile) {
+        db[approvedUser.mobile] = db[appUName] || approvedUser;
+      }
+
       if (window.SafeStorage) {
         window.SafeStorage.setItem('kaamsetu_users_db', JSON.stringify(db));
       } else {
@@ -10592,10 +10787,45 @@ async function handleApprovePendingUser(userId) {
       }
     } catch (e) {}
 
+    // 3. Remove from pendingUsers collection cleanly
+    window.appState.data.pendingUsers = (window.appState.data.pendingUsers || []).filter(u => {
+      if (!u) return false;
+      const uid = String(u.id || '').toLowerCase();
+      const uback = String(u.backendId || '').toLowerCase();
+      const uuser = String(u.username || '').toLowerCase();
+      const targetClean = String(targetId || '').toLowerCase();
+      const userClean = String(userId || '').toLowerCase();
+      const appUserClean = String(approvedUser.username || '').toLowerCase();
+      if (uid === targetClean || uid === userClean || uback === targetClean || uback === userClean) return false;
+      if (appUserClean && uuser === appUserClean) return false;
+      if (u.status === 'APPROVED' || u.status === 'REJECTED') return false;
+      return true;
+    });
+
+    if (window.SafeStorage) {
+      window.SafeStorage.setItem('kaamsetu_pending_users_registry', window.appState.data.pendingUsers);
+    }
+    localStorage.setItem('kaamsetu_pending_users_registry', JSON.stringify(window.appState.data.pendingUsers));
+
     // Resync collections to guarantee zero duplicate entries
     if (window.appState.syncAllWorkersFromRegistry) window.appState.syncAllWorkersFromRegistry();
     if (window.appState.syncAllProvidersFromRegistry) window.appState.syncAllProvidersFromRegistry();
+    if (window.appState.syncAllPendingUsersFromRegistry) window.appState.syncAllPendingUsersFromRegistry();
   }
+
+  // Set prominent success approval notification
+  const userName = approvedUser ? (approvedUser.fullName || approvedUser.name || `@${approvedUser.username}`) : 'वापरकर्ता';
+  const uUsername = approvedUser ? approvedUser.username : '';
+  const uRole = approvedUser ? (approvedUser.role === 'WORKER' ? (window.i18n ? window.i18n.t('role.workerBtn') : '👷 कामगार') : (window.i18n ? window.i18n.t('role.providerBtn') : '👨‍🌾 नियोक्ता')) : '';
+
+  window._adminApprovedNotice = {
+    name: userName,
+    username: uUsername,
+    role: approvedUser ? approvedUser.role : 'WORKER',
+    roleLabel: uRole,
+    mobile: approvedUser ? approvedUser.mobile : '',
+    timestamp: Date.now()
+  };
 
   if (!window.appState.data.auditLogs) window.appState.data.auditLogs = [];
   window.appState.data.auditLogs.unshift({
@@ -10606,24 +10836,29 @@ async function handleApprovePendingUser(userId) {
     status: "APPROVED",
     time: new Date().toISOString().replace('T', ' ').substring(0, 19),
     ip: "127.0.0.1",
-    details: "Admin approved pending registration"
+    details: `Admin approved pending registration for ${userName} (@${uUsername})`
   });
 
   window.appState.notify();
   renderApp();
-  const userName = approvedUser ? (approvedUser.fullName || approvedUser.name || `@${approvedUser.username}`) : 'वापरकर्ता';
-  showToast(`🎉 ${userName} चे खाते यशस्वीरीत्या मंजूर केले! (आता हे खाते सक्रिय आहे)`);
+
+  showToast(`🎉 ${userName} चे खाते यशस्वीरीत्या पडताळले व मंजूर केले! (आता हे खाते सक्रिय आहे)`);
 }
 
 async function handleRejectPendingUser(userId) {
   const pendingList = window.appState.data.pendingUsers || [];
-  const idx = pendingList.findIndex(u => u.id === userId || (u.backendId && u.backendId === userId));
+  let idx = pendingList.findIndex(u => u && (u.id === userId || (u.backendId && u.backendId === userId)));
+  if (idx === -1) {
+    const cleanId = String(userId || '').trim().toLowerCase();
+    idx = pendingList.findIndex(u => u && (u.username && u.username.toLowerCase() === cleanId));
+  }
+
   let rejected = null;
   if (idx !== -1) {
     rejected = pendingList.splice(idx, 1)[0];
   }
 
-  const targetId = (rejected && (rejected.backendId || rejected.id)) || userId;
+  const targetId = (rejected && (rejected.backendId || rejected.id || rejected.username)) || userId;
   if (typeof ApiClient !== 'undefined' && ApiClient.rejectUser) {
     try {
       await ApiClient.rejectUser(targetId, 'Admin rejected registration');
@@ -10635,11 +10870,27 @@ async function handleRejectPendingUser(userId) {
   if (rejected) {
     try {
       const db = (window.SafeStorage ? window.SafeStorage.getJSON('kaamsetu_users_db', {}) : JSON.parse(localStorage.getItem('kaamsetu_users_db') || '{}'));
+      const rejUName = (rejected.username || '').toLowerCase();
+      const rejMob = (rejected.mobile || '').replace(/\D/g, '');
+      const rejShortMob = rejMob.length >= 10 ? rejMob.slice(-10) : '';
+
       for (const k in db) {
         const u = db[k];
-        if (u && (u.id === userId || u.username === rejected.username || (rejected.backendId && u.id === rejected.backendId))) {
+        if (!u) continue;
+        const uId = String(u.id || '').toLowerCase();
+        const uBackId = String(u.backendId || '').toLowerCase();
+        const uUser = String(u.username || '').toLowerCase();
+        const uMob = String(u.mobile || '').replace(/\D/g, '');
+        const uShortMob = uMob.length >= 10 ? uMob.slice(-10) : '';
+
+        const isMatch = (userId && (uId === String(userId).toLowerCase() || uBackId === String(userId).toLowerCase())) ||
+                        (rejected.id && uId === String(rejected.id).toLowerCase()) ||
+                        (rejected.backendId && uBackId === String(rejected.backendId).toLowerCase()) ||
+                        (rejUName && uUser === rejUName) ||
+                        (rejShortMob && uShortMob === rejShortMob);
+
+        if (isMatch) {
           delete db[k];
-          break;
         }
       }
       if (window.SafeStorage) {
@@ -10648,7 +10899,53 @@ async function handleRejectPendingUser(userId) {
         localStorage.setItem('kaamsetu_users_db', JSON.stringify(db));
       }
     } catch (e) {}
+
+    // Record rejected user permanently in registry
+    try {
+      const rejReg = (window.SafeStorage ? window.SafeStorage.getJSON('kaamsetu_rejected_users_registry', {}) : JSON.parse(localStorage.getItem('kaamsetu_rejected_users_registry') || '{}'));
+      const keysToRegister = [];
+      if (userId) keysToRegister.push(String(userId).toLowerCase());
+      if (targetId) keysToRegister.push(String(targetId).toLowerCase());
+      if (rejected.id) keysToRegister.push(String(rejected.id).toLowerCase());
+      if (rejected.backendId) keysToRegister.push(String(rejected.backendId).toLowerCase());
+      if (rejected.username) keysToRegister.push(String(rejected.username).toLowerCase());
+      if (rejected.name) keysToRegister.push(String(rejected.name).toLowerCase());
+      if (rejected.fullName) keysToRegister.push(String(rejected.fullName).toLowerCase());
+      if (rejected.mobile) {
+        keysToRegister.push(String(rejected.mobile).toLowerCase());
+        const d = String(rejected.mobile).replace(/\D/g, '');
+        if (d.length >= 10) keysToRegister.push(d.slice(-10));
+      }
+      keysToRegister.forEach(k => { if (k) rejReg[k] = true; });
+
+      if (window.SafeStorage) {
+        window.SafeStorage.setItem('kaamsetu_rejected_users_registry', JSON.stringify(rejReg));
+      }
+      localStorage.setItem('kaamsetu_rejected_users_registry', JSON.stringify(rejReg));
+    } catch (e) {}
+
+    // Cleanly filter from state
+    window.appState.data.pendingUsers = (window.appState.data.pendingUsers || []).filter(u => {
+      if (!u) return false;
+      const uid = String(u.id || '').toLowerCase();
+      const uback = String(u.backendId || '').toLowerCase();
+      const uuser = String(u.username || '').toLowerCase();
+      const targetClean = String(targetId || '').toLowerCase();
+      const userClean = String(userId || '').toLowerCase();
+      const rejUserClean = String(rejected.username || '').toLowerCase();
+      if (uid === targetClean || uid === userClean || uback === targetClean || uback === userClean) return false;
+      if (rejUserClean && uuser === rejUserClean) return false;
+      if (u.status === 'REJECTED') return false;
+      return true;
+    });
+
+    if (window.SafeStorage) {
+      window.SafeStorage.setItem('kaamsetu_pending_users_registry', window.appState.data.pendingUsers);
+    }
+    localStorage.setItem('kaamsetu_pending_users_registry', JSON.stringify(window.appState.data.pendingUsers));
   }
+
+  window._adminApprovedNotice = null;
 
   if (!window.appState.data.auditLogs) window.appState.data.auditLogs = [];
   window.appState.data.auditLogs.unshift({

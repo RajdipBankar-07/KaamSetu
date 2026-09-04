@@ -404,11 +404,16 @@ const translations = {
   "gender.male": { en: "Male", mr: "पुरुष (Male)", hi: "पुरुष (Male)" },
   "gender.female": { en: "Female", mr: "महिला (Female)", hi: "महिला (Female)" },
   "gender.other": { en: "Other", mr: "इतर (Other)", hi: "अन्य (Other)" },
+  "role.worker": { en: "Worker", mr: "कामगार", hi: "कामगार" },
+  "role.provider": { en: "Employer", mr: "नियोक्ता", hi: "नियोक्ता" },
   "admin.pendingUsers": { en: "Pending User Approvals", mr: "प्रलंबित खाती व मंजुरी", hi: "लंबित खाते व स्वीकृति" },
   "admin.approve": { en: "✓ Approve", mr: "✓ मंजूर करा", hi: "✓ स्वीकृत करें" },
   "admin.reject": { en: "✕ Reject", mr: "✕ नाकारा", hi: "✕ अस्वीकार करें" },
   "admin.userApprovedToast": { en: "User account approved successfully!", mr: "वापरकर्ता खाते यशस्वीरीत्या मंजूर केले!", hi: "उपयोगकर्ता खाता सफलतापूर्वक स्वीकृत हुआ!" },
   "admin.userRejectedToast": { en: "User account rejected.", mr: "वापरकर्ता खाते नाकारले.", hi: "उपयोगकर्ता खाता अस्वीकार किया गया।" },
+  "admin.userApprovedNoticeTitle": { en: "🎉 Account Successfully Verified & Approved!", mr: "🎉 खाते यशस्वीरीत्या पडताळले व मंजूर केले!", hi: "🎉 खाता सफलतापूर्वक सत्यापित एवं स्वीकृत हुआ!" },
+  "admin.userApprovedNoticeDesc": { en: "User: {name} (@{username}) | Role: {role} | Status: VERIFIED & ACTIVE", mr: "वापरकर्ता: {name} (@{username}) | भूमिका: {role} | स्थिती: पडताळणी पूर्ण व सक्रिय", hi: "उपयोगकर्ता: {name} (@{username}) | भूमिका: {role} | स्थिति: सत्यापित व सक्रिय" },
+  "admin.userApprovedNoticeLoginReady": { en: "Login Ready: This user can now immediately log in using their valid username/mobile and password.", mr: "लॉगिन सज्ज: हा वापरकर्ता आता वैध युझरनेम किंवा मोबाईल आणि पासवर्डने थेट लॉग इन करू शकतो.", hi: "लॉगिन तैयार: यह उपयोगकर्ता अब अपने वैध उपयोगकर्ता नाम/मोबाइल और पासवर्ड से तुरंत लॉगिन कर सकता है।" },
 
   // Hierarchical Location Selector Keys (Complete India Administrative Master)
   "location.country": { en: "Country", mr: "देश (Country)", hi: "देश (Country)" },

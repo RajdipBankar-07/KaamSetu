@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "https://kaamsetu-backend-y1ds.onrender.com/api/v1/:path*"
+      "destination": "https://kaamsetu-backend.onrender.com/api/v1/:path*"
     },
     {
       "source": "/(.*)",

@@ -5,12 +5,9 @@
  */
 
 const ApiClient = (function () {
-    const isLocalhost = typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
     const API_BASE_URL = window.API_BASE_URL || 
         (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_API_BASE_URL) || 
-        (isLocalhost ? 'http://localhost:8090/api/v1' : 'https://kaamsetu-backend-y1ds.onrender.com/api/v1');
+        'http://localhost:8090/api/v1';
 
     let currentServerStatus = 'BACKEND_CHECKING'; // 'BACKEND_CHECKING' | 'BACKEND_ONLINE' | 'BACKEND_OFFLINE'
     let lastHealthCheck = null;

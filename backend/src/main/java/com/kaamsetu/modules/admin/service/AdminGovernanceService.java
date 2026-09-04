@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -84,9 +85,12 @@ public class AdminGovernanceService {
 
     @Transactional
     public UserEntity approveUser(UUID adminId, UUID targetUserId) {
-        UserEntity user = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUserId));
+        return approveUser(adminId, targetUserId.toString());
+    }
 
+    @Transactional
+    public UserEntity approveUser(UUID adminId, String userIdentifier) {
+        UserEntity user = resolveUser(userIdentifier);
         user.setStatus(UserStatusEnum.APPROVED);
         user.setIsVerified(true);
         UserEntity saved = userRepository.save(user);
@@ -100,9 +104,12 @@ public class AdminGovernanceService {
 
     @Transactional
     public UserEntity rejectUser(UUID adminId, UUID targetUserId, String reason) {
-        UserEntity user = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUserId));
+        return rejectUser(adminId, targetUserId.toString(), reason);
+    }
 
+    @Transactional
+    public UserEntity rejectUser(UUID adminId, String userIdentifier, String reason) {
+        UserEntity user = resolveUser(userIdentifier);
         user.setStatus(UserStatusEnum.REJECTED);
         UserEntity saved = userRepository.save(user);
 
@@ -111,6 +118,23 @@ public class AdminGovernanceService {
 
         log.info("Admin [{}] rejected user [{}]", adminId, user.getUsername());
         return saved;
+    }
+
+    private UserEntity resolveUser(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            throw new IllegalArgumentException("User identifier cannot be empty");
+        }
+        try {
+            UUID uid = UUID.fromString(identifier.trim());
+            Optional<UserEntity> byId = userRepository.findById(uid);
+            if (byId.isPresent()) return byId.get();
+        } catch (IllegalArgumentException ignored) {}
+
+        String clean = identifier.trim();
+        return userRepository.findByUsernameIgnoreCase(clean)
+                .or(() -> userRepository.findByMobile(clean))
+                .or(() -> userRepository.findByEmailIgnoreCase(clean))
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + identifier));
     }
 
     @Transactional
